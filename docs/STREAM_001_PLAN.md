@@ -10,7 +10,11 @@
 
 ## Main Question
 
-Can AI help build the MVP container for an AI streaming assistant?
+Справится ли этот AI-сетап помочь подготовить MVP помощника для стрима?
+
+Primary setup: ChatGPT Project + Codex + GitHub repo + human operator review.
+
+Stream 001 does not require comparing multiple setups. The verdict should be about this setup, not about AI in general.
 
 ## 1. Intro
 
@@ -18,9 +22,9 @@ Frame the stream as Episode 0 / Live Lab of **"Справится ли AI? / Can
 
 Explain the format briefly:
 
-task → criteria → AI attempt → human review → scorecard → verdict
+task → setup → criteria → AI attempt → human review → scorecard → verdict
 
-The episode is about checking whether AI can help create the operating base for a streaming assistant, not about shipping a production system.
+The episode is about checking whether this AI setup can help create the operating base for a streaming assistant, not about shipping a production system.
 
 ## 2. Task and Success Criteria
 
@@ -31,13 +35,20 @@ Success criteria:
 - repo exists as the source of truth;
 - README explains the public format and MVP boundary;
 - project brief defines the tool roles and experiment mechanic;
+- the tested setup is explicit;
 - Stream 001 plan has a clear structure;
+- final verdict is about the tested setup, not AI in general;
 - decisions are recorded;
 - no implementation code, dependencies, API clients, secrets, stream keys, tokens, or private URLs are added.
 
 ## 3. ChatGPT Project + GitHub Repo
 
-Use ChatGPT for planning/context and GitHub as the source of truth.
+Test one primary setup:
+
+- ChatGPT Project for planning/context;
+- Codex for small docs tasks;
+- GitHub repo as the source of truth;
+- human operator review for constraints, usefulness, and verdict.
 
 Show the repo structure at a high level:
 
@@ -97,10 +108,12 @@ Score each item from 0 to 2:
 
 Verdict to fill after the stream:
 
-- Can AI handle this?
+- Did this setup handle the task?
 - What worked?
 - What failed?
+- How much human control was needed?
 - What should be done manually next time?
+- What should change in the next setup?
 
 ## Fallback
 
@@ -108,4 +121,4 @@ If AI tools fail, continue with the normal microphone and manual explanation. Th
 
 ## Safety
 
-Do not show `.env`, API keys, stream keys, tokens, credentials, private dashboards, private repository settings, or private URLs on stream.
+Do not show `.env`, API keys, stream keys, tokens, private URLs, local credentials, personal data, private dashboards, or private repository settings on stream.
