@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenAI Realtime Voice Experiment</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="header">
+        <p class="eyebrow">Stream 001 / Experiment 001</p>
+        <h1>OpenAI Realtime Voice</h1>
+        <p class="summary">
+          Minimal local WebRTC test for connecting a Russian voice assistant to
+          a stream workflow.
+        </p>
+      </header>
+
+      <section class="controls" aria-label="Voice controls">
+        <button id="startButton" type="button">Start voice session</button>
+        <button id="stopButton" type="button" disabled>Stop</button>
+      </section>
+
+      <section class="status-panel" aria-live="polite">
+        <h2>Status</h2>
+        <p id="statusText">Idle. Click Start voice session when ready.</p>
+      </section>
+
+      <section class="audio-panel">
+        <h2>Model audio</h2>
+        <audio id="remoteAudio" autoplay controls></audio>
+      </section>
+
+      <section class="log-panel">
+        <div class="log-title">
+          <h2>Event log</h2>
+          <button id="clearLogButton" type="button">Clear</button>
+        </div>
+        <ol id="eventLog" class="event-log"></ol>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
+

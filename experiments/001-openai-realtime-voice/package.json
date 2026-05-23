@@ -1,0 +1,13 @@
+{
+  "name": "stream-agent-realtime-voice-experiment",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal local WebRTC prototype for OpenAI Realtime voice in Stream 001.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
+
