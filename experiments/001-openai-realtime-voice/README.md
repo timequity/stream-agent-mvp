@@ -1,27 +1,35 @@
-# Experiment 001: OpenAI Realtime Voice
+# Experiment 001: OpenAI Realtime Voice Agent
 
-Minimal local browser prototype for testing an OpenAI Realtime voice layer for Stream 001.
+Minimal local browser prototype for testing an OpenAI Realtime voice-agent layer for Stream 001.
 
 Tested setup:
 
-ChatGPT + Codex + GitHub repo + OpenAI Realtime API + human operator review.
+ChatGPT + Codex + GitHub repo + OpenAI Agents SDK + OpenAI Realtime API + human operator review.
 
 Main question:
 
-Can this setup help connect a working OpenAI Realtime voice layer for a stream?
+Can this setup help connect a working OpenAI Realtime voice-agent layer for a stream?
 
 ## What This Is
 
 - Local-only browser prototype.
-- WebRTC microphone input from the browser.
-- OpenAI Realtime voice response playback in the browser.
+- Official Agents SDK path: `RealtimeAgent` + `RealtimeSession`.
+- Browser WebRTC microphone input managed by the SDK transport.
+- Server-created ephemeral Realtime client secret.
+- OpenAI Realtime voice response playback in the browser audio element.
 - Small event log for debugging the connection.
 
 This is not a production app, OBS automation, voice cloning, translation system, or streaming platform integration.
 
+## Why This Uses The Agents SDK Path
+
+The official OpenAI docs recommend `RealtimeAgent` and `RealtimeSession` as the fastest path for a browser-based speech-to-speech voice assistant. The lower-level WebRTC path is useful for transport control, but Stream 001 is testing whether the official voice-agent setup can become the first stream voice layer.
+
+The app keeps the standard `OPENAI_API_KEY` on the local server. The browser receives only a short-lived Realtime client secret created by the server.
+
 ## Requirements
 
-- Node.js 20+.
+- Node.js 20.19+.
 - An OpenAI API key with access to Realtime.
 - Root `.env` file containing:
 
@@ -54,16 +62,18 @@ STREAM_AGENT_NO_OPEN=1 npm start
 1. Start the local server with `npm start`.
 2. The browser opens the local page.
 3. Click **Start voice session**.
-4. Allow microphone access.
-5. Speak in Russian.
-6. The browser sends microphone audio through WebRTC.
-7. The browser plays the model audio response.
-8. Watch status and event log for connection events.
-9. Click **Stop** to close the peer connection and microphone stream.
+4. The local server creates an ephemeral Realtime client secret.
+5. Allow microphone access.
+6. Speak in Russian.
+7. `RealtimeSession` connects over browser WebRTC.
+8. The browser plays the model audio response.
+9. Watch status and event log for agent/session events.
+10. Click **Stop** to close the session.
 
 ## Safety
 
 - Never expose the standard `OPENAI_API_KEY` to browser code.
+- Use server-created ephemeral client secrets for browser sessions.
 - Never commit `.env`.
 - Do not show `.env`, API keys, stream keys, tokens, private URLs, local credentials, or personal data on stream.
 
@@ -78,15 +88,17 @@ STREAM_AGENT_NO_OPEN=1 npm start
 ### Missing API key
 
 - Confirm root `.env` exists.
-- Confirm it contains `OPENAI_API_KEY=...`.
+- Confirm it contains a non-empty `OPENAI_API_KEY`.
 - Restart `npm start` after editing `.env`.
 
 ### Connection failure
 
 - Check the terminal for the upstream Realtime error.
 - Confirm the model is `gpt-realtime-2`.
+- Confirm `npm install` completed successfully.
 - Confirm your account has access to the OpenAI Realtime API.
 - Confirm local network access to `https://api.openai.com`.
+- Reload the page if the previous session was interrupted mid-connect.
 
 ### No audio
 
@@ -94,4 +106,3 @@ STREAM_AGENT_NO_OPEN=1 npm start
 - Keep the tab active and allow autoplay after the start click.
 - Speak after status says the session is connected.
 - Try headphones to avoid echo cancellation issues.
-

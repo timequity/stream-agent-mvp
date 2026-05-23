@@ -1,42 +1,53 @@
-const { createServer } = require("node:http");
-const { readFileSync, existsSync } = require("node:fs");
-const { extname, join, normalize, resolve } = require("node:path");
-const { spawn } = require("node:child_process");
+import { createServer as createHttpServer } from "node:http";
+import { readFileSync, existsSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { spawn } from "node:child_process";
+import { createServer as createViteServer } from "vite";
 
-const ROOT_DIR = resolve(__dirname, "../..");
-const PUBLIC_DIR = join(__dirname, "public");
+const ROOT_DIR = resolve(import.meta.dirname, "../..");
+const PUBLIC_DIR = join(import.meta.dirname, "public");
 const HOST = process.env.HOST || "127.0.0.1";
 const PORT = Number(process.env.PORT || 3333);
+const CLIENT_SECRET_TTL_SECONDS = 600;
 
 const ASSISTANT_INSTRUCTIONS =
   "Ты AI-помощник для технического стрима. Отвечай кратко, по-русски, живо и без лишней официальности. Помогай ведущему объяснять, что происходит.";
 
 loadEnvFile(join(ROOT_DIR, ".env"));
 
-const sessionConfig = {
-  type: "realtime",
-  model: "gpt-realtime-2",
-  instructions: ASSISTANT_INSTRUCTIONS,
-  audio: {
-    output: {
-      voice: "marin",
-    },
+const vite = await createViteServer({
+  root: PUBLIC_DIR,
+  appType: "spa",
+  logLevel: "warn",
+  server: {
+    middlewareMode: true,
   },
-};
+});
 
-const server = createServer(async (req, res) => {
+const server = createHttpServer(async (req, res) => {
   try {
-    if (req.method === "POST" && req.url === "/session") {
-      await handleSession(req, res);
+    const url = new URL(req.url || "/", `http://${req.headers.host || HOST}`);
+
+    if (url.pathname === "/client-secret") {
+      if (req.method !== "POST") {
+        sendJson(res, 405, { error: "Method not allowed" });
+        return;
+      }
+
+      await handleClientSecret(res);
       return;
     }
 
-    if (req.method === "GET" || req.method === "HEAD") {
-      serveStatic(req, res);
-      return;
-    }
+    vite.middlewares(req, res, (error) => {
+      if (error) {
+        vite.ssrFixStacktrace(error);
+        console.error("Vite middleware error:", error);
+        sendJson(res, 500, { error: "Local dev server error" });
+        return;
+      }
 
-    sendJson(res, 405, { error: "Method not allowed" });
+      sendJson(res, 404, { error: "Not found" });
+    });
   } catch (error) {
     console.error("Server error:", error);
     sendJson(res, 500, { error: "Internal server error" });
@@ -49,7 +60,7 @@ server.listen(PORT, HOST, () => {
   maybeOpenBrowser(url);
 });
 
-async function handleSession(req, res) {
+async function handleClientSecret(res) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     sendJson(res, 500, {
@@ -58,89 +69,53 @@ async function handleSession(req, res) {
     return;
   }
 
-  const sdp = await readRequestBody(req);
-  if (!sdp.trim()) {
-    sendJson(res, 400, { error: "Missing SDP offer" });
-    return;
-  }
-
-  const form = new FormData();
-  form.set("sdp", sdp);
-  form.set("session", JSON.stringify(sessionConfig));
-
-  const response = await fetch("https://api.openai.com/v1/realtime/calls", {
+  const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
     },
-    body: form,
+    body: JSON.stringify({
+      expires_after: {
+        anchor: "created_at",
+        seconds: CLIENT_SECRET_TTL_SECONDS,
+      },
+      session: {
+        type: "realtime",
+        model: "gpt-realtime-2",
+        instructions: ASSISTANT_INSTRUCTIONS,
+        audio: {
+          output: {
+            voice: "marin",
+          },
+        },
+      },
+    }),
   });
 
   const body = await response.text();
 
   if (!response.ok) {
-    console.error("OpenAI Realtime API error:", response.status, body);
+    console.error("OpenAI Realtime client secret error:", response.status);
     sendJson(res, response.status, {
-      error: "OpenAI Realtime session failed",
+      error: "OpenAI Realtime client secret request failed",
       status: response.status,
-      details: body.slice(0, 1000),
     });
     return;
   }
 
-  res.writeHead(200, { "Content-Type": "application/sdp" });
+  res.writeHead(200, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
   res.end(body);
 }
 
-function serveStatic(req, res) {
-  const rawPath = req.url === "/" ? "/index.html" : req.url || "/index.html";
-  const cleanPath = normalize(decodeURIComponent(rawPath.split("?")[0])).replace(
-    /^(\.\.[/\\])+/,
-    ""
-  );
-  const filePath = join(PUBLIC_DIR, cleanPath);
-
-  if (!filePath.startsWith(PUBLIC_DIR) || !existsSync(filePath)) {
-    sendJson(res, 404, { error: "Not found" });
-    return;
-  }
-
-  res.writeHead(200, { "Content-Type": contentType(filePath) });
-  if (req.method === "HEAD") {
-    res.end();
-    return;
-  }
-
-  res.end(readFileSync(filePath));
-}
-
-function contentType(filePath) {
-  const types = {
-    ".html": "text/html; charset=utf-8",
-    ".js": "text/javascript; charset=utf-8",
-    ".css": "text/css; charset=utf-8",
-  };
-
-  return types[extname(filePath)] || "application/octet-stream";
-}
-
-function readRequestBody(req) {
-  return new Promise((resolveBody, rejectBody) => {
-    let body = "";
-    req.setEncoding("utf8");
-    req.on("data", (chunk) => {
-      body += chunk;
-      if (body.length > 2_000_000) {
-        rejectBody(new Error("Request body too large"));
-        req.destroy();
-      }
-    });
-    req.on("end", () => resolveBody(body));
-    req.on("error", rejectBody);
-  });
-}
-
 function sendJson(res, status, payload) {
+  if (res.headersSent) {
+    return;
+  }
+
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(payload));
 }
